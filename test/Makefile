@@ -1,9 +1,9 @@
 SIM ?= icarus
 TOPLEVEL_LANG = verilog
 SRC_DIR = $(PWD)/../rtl
-PROJECT_SOURCES = axi4-lite.v
+PROJECT_SOURCES = axi4_lite_master.v
 WAVES = 1
-SIM_BUILD = sim_build/
+SIM_BUILD = sim_build
 
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/axi4-lite/,$(PROJECT_SOURCES))
 COMPILE_ARGS	+= -I$(SRC_DIR)/axi4-lite
