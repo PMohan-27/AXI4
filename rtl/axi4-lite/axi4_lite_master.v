@@ -6,11 +6,12 @@ module axi4_lite #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     // Control Signals
     input [ADDRESS_WIDTH-1:0] ctrl_addr,
     input [DATA_WIDTH-1:0] ctrl_wdata,
-    input ctrl_write_en,
-    input ctrl_read_en,
-    output [DATA_WIDTH-1:0] ctrl_rdata,
-    output ctrl_done,
-    output [2:0] ctrl_resp,
+    input [(DATA_WIDTH/8)-1 : 0] ctrl_wstrb,
+    input ctrl_write_req,
+    input ctrl_read_req,
+    output reg [DATA_WIDTH-1:0] ctrl_rdata,
+    output reg ctrl_done,
+    output reg [1:0] ctrl_resp,
 
 
     // Write Address
@@ -57,75 +58,51 @@ module axi4_lite #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     end
 
     //Write Address
-    reg addr_write_state;
-    always @(posedge ACLK)begin
-        AWPROT <= 3'b001; // priviliged for now
-        if(!rst_sync2)begin
+    reg write_addr_state;
+    always @(posedge ACLK) begin
+        if(!rst_sync2) begin
+            AWADDR <= 1'b0;
             AWVALID <= 1'b0;
-            addr_write_state <= 1'b0;
-        end
-        else begin 
-            if(ctrl_write_en && !addr_write_state) begin
+            write_addr_state <= 1'b0;
+            AWPROT <= 3'b001;
+        end 
+        else begin
+            if(ctrl_write_req)begin
+                write_addr_state <= 1'b1;
+            end
+            if(write_addr_state) begin
                 AWADDR <= ctrl_addr;
                 AWVALID <= 1'b1;
-                addr_write_state <= 1'b1;
             end
-            if(AWVALID && AWREADY) begin
+            if(AWVALID & AWREADY) begin
                 AWVALID <= 1'b0;
-                addr_write_state <= 1'b0;
+                write_addr_state <= 1'b0;              
             end
         end
     end
 
-    //Write Data
-    reg data_write_state;
+    // Write Data
+    reg write_data_state;
     always @(posedge ACLK) begin
-        WSTRB <= 4'b1111; // full strb for now
-        if(!rst_sync2)begin
+        if(!rst_sync2) begin
             WVALID <= 1'b0;
-            data_write_state <= 1'b0;
-        end
-        else begin 
-            if(ctrl_write_en && !data_write_state) begin
+            WDATA <= 32'b0;
+            WSTRB <= 4'b1111;
+            write_data_state <= 1'b0;
+        end 
+        else begin
+            if(ctrl_write_req) begin 
+                write_data_state <= 1'b1;
+            end
+            if(write_data_state) begin
                 WDATA <= ctrl_wdata;
+                WSTRB <= ctrl_wstrb;
                 WVALID <= 1'b1;
-                data_write_state <= 1'b1;
             end
             if(WVALID && WREADY) begin
                 WVALID <= 1'b0;
-                data_write_state <= 1'b0;
+                write_data_state <= 1'b0;
             end
         end
     end
-
-    // Write Response
-    reg aw_done, w_done;
-    always @(posedge ACLK) begin
-        if(!rst_sync2) begin
-            BREADY <= 1'b0;
-            ctrl_done <= 1'b0;
-            aw_done <= 1'b0;
-            w_done <= 1'b0;
-        end
-        else begin
-            if(WVALID && WREADY) w_done <= 1'b1;
-            if(AWVALID && AWREADY) aw_done <= 1'b1;
-
-            if(aw_done && w_done) begin
-                BREADY <= 1'b1;
-            end
-
-            if(BREADY && BVALID) begin
-                ctrl_resp <= BRESP;
-                ctrl_done <= 1'b1;
-                BREADY <= 1'b0;
-                aw_done <= 1'b0;
-                w_done <= 1'b0;
-            end
-            else begin
-                ctrl_done <= 1'b0;
-            end
-        end
-    end
-    
 endmodule
