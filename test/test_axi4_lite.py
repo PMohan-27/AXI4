@@ -14,5 +14,15 @@ async def test_axi(dut):
     await RisingEdge(dut.ACLK)
     dut.ARESETn.value = 1
 
+    await RisingEdge(dut.ACLK)
+    await RisingEdge(dut.ACLK)
+    await RisingEdge(dut.ACLK)
+    await RisingEdge(dut.ACLK)
+    await RisingEdge(dut.ACLK)
+
+    dut.ctrl_write_req.value = 1
+    await RisingEdge(dut.ACLK)
+    dut.ctrl_write_req.value = 0
+    
     for i in range(10):
         await RisingEdge(dut.ACLK)
