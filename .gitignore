@@ -3,3 +3,4 @@ test/__pycache__
 test/sim_build
 test/results.xml
 docs/notes.txt
+test/dump.fst
