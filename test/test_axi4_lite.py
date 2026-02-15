@@ -1,28 +1,20 @@
 import cocotb
-from cocotb.clock import Clock, Timer
-from cocotb.triggers import RisingEdge
+from cocotb.clock import Clock
+from cocotb.triggers import Timer, RisingEdge
 
 @cocotb.test()
-async def test_axi(dut):
-    cocotb.log.info("hello cocotb")
+async def smoke_test(dut):
 
-    clock = Clock(dut.ACLK, 10, unit='ns')
-    cocotb.start_soon(clock.start())
-    dut.ARESETn.value = 1
-    await Timer(1,unit='ns')
-    dut.ARESETn.value = 0
-    await RisingEdge(dut.ACLK)
-    dut.ARESETn.value = 1
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
 
-    await RisingEdge(dut.ACLK)
-    await RisingEdge(dut.ACLK)
-    await RisingEdge(dut.ACLK)
-    await RisingEdge(dut.ACLK)
-    await RisingEdge(dut.ACLK)
+    # Apply reset
+    dut.rst_n.value = 0
+    await Timer(50, units="ns")
+    dut.rst_n.value = 1
 
-    dut.ctrl_write_req.value = 1
-    await RisingEdge(dut.ACLK)
-    dut.ctrl_write_req.value = 0
-    
-    for i in range(10):
-        await RisingEdge(dut.ACLK)
+    # Let a few cycles run
+    for _ in range(5):
+        await RisingEdge(dut.clk)
