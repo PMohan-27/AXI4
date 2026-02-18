@@ -56,6 +56,31 @@ interface axi_lite_if #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_WI
         // Clock / reset
         input ACLK, ARESETn
     );
+    modport slave 
+    (
+        // Write address
+        input AWADDR, AWPROT, AWVALID,
+        output  AWREADY,
+
+        // Write data
+        input WDATA, WSTRB, WVALID,
+        output  WREADY,
+
+        // Write response
+        output  BRESP, BVALID,
+        input BREADY,
+
+        // Read address
+        input ARADDR, ARPROT, ARVALID,
+        output  ARREADY,
+
+        // Read data
+        output  RDATA, RRESP, RVALID,
+        input RREADY,
+
+        // Clock / reset
+        input ACLK, ARESETn
+    );
 
 
 endinterface

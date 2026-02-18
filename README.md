@@ -10,7 +10,7 @@ I'm writing an AXI4 bus implementation for a RISCV SoC. I'd like to implement a 
 
 ## Project Structure
 
-```bash
+```txt
 rtl/ - Verilog files
 test/ - Testbenches
 docs/ - Documentation and diagrams

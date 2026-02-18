@@ -12,5 +12,6 @@ TOPLEVEL= axi4_lite_top
 COCOTB_TEST_MODULES=test_axi4_lite
 EXTRA_ARGS += --trace --trace-fst --trace-structs --x-initial unique --x-assign unique
 
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
