@@ -1,3 +1,4 @@
 # Info
 
-TODO
+
+![wrte signals](write_waveform.png)

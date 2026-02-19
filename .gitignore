@@ -4,3 +4,4 @@ test/sim_build
 test/results.xml
 docs/notes.txt
 test/dump.fst
+docs/wavedrom.txt

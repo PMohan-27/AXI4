@@ -1,7 +1,8 @@
 module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_WIDTH = 32)(
 
     // Control Signals
-    input logic [ADDRESS_WIDTH-1:0] ctrl_addr,
+    input logic [ADDRESS_WIDTH-1:0] ctrl_waddr,
+    input logic [ADDRESS_WIDTH-1:0] ctrl_raddr,
     input logic [DATA_WIDTH-1:0] ctrl_wdata,
     input logic [(DATA_WIDTH/8)-1 : 0] ctrl_wstrb,
     input logic ctrl_write_req,
@@ -9,12 +10,16 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
     output logic [DATA_WIDTH-1:0] ctrl_rdata,
     output logic ctrl_write_done,
     output logic ctrl_read_done,
-    output logic [1:0] ctrl_resp,
+    output logic [1:0] ctrl_bresp,
+    output logic [1:0] ctrl_rresp,
+
 
     axi_lite_if.master  axi
     
 );
-    
+    typedef enum logic[1:0] { IDLE, SENDING, AWAITING } state;
+    state write_state, read_state;
+    logic aw_sent, w_sent;
     // NOTE: In SoC integration, ARESETn is assumed synchronized externally.
     logic rst_sync1, rst_sync2;
     always_ff @(posedge axi.ACLK or negedge axi.ARESETn) begin
@@ -28,132 +33,75 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
         end
     end
 
-    //Write Address
-    logic write_addr_state;
+    
+    always_ff @(posedge axi.ACLK) begin 
+        if(!rst_sync2) begin 
+            aw_sent <= '0;
+            w_sent <= '0;
+            write_state <= IDLE;
+        end 
+        else begin
+            case(write_state) 
+                IDLE: if(ctrl_write_req == 1'b1) write_state <= SENDING; 
+                SENDING: if(aw_sent && w_sent) write_state <= AWAITING;
+                AWAITING: if(axi.BREADY && axi.BVALID) write_state <= IDLE;
+                default: write_state <= IDLE;
+            endcase
+        end
+    end
+
     always_ff @(posedge axi.ACLK) begin
         if(!rst_sync2) begin
             axi.AWADDR <= '0;
             axi.AWVALID <= '0;
-            write_addr_state <= '0;
-            axi.AWPROT <= 3'b001;
-        end 
-        else begin
-            if(ctrl_write_req && !write_addr_state)begin
-                write_addr_state <= 1'b1;
-            end
-            if(write_addr_state) begin
-                axi.AWADDR <= ctrl_addr;
-                axi.AWVALID <= 1'b1;
-            end
-            if(axi.AWVALID & axi.AWREADY) begin
-                axi.AWVALID <= 1'b0;
-                write_addr_state <= 1'b0;              
-            end
-        end
-    end
-
-    // Write Data
-    logic write_data_state;
-    always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
-            axi.WVALID <= '0;
             axi.WDATA <= '0;
-            axi.WSTRB <= '1;
-            write_data_state <= '0;
-        end 
-        else begin
-            if(ctrl_write_req && !write_data_state) begin 
-                write_data_state <= 1'b1;
-            end
-            if(write_data_state) begin
-                axi.WDATA <= ctrl_wdata;
-                axi.WSTRB <= ctrl_wstrb;
-                axi.WVALID <= 1'b1;
-            end
-            if(axi.WVALID && axi.WREADY) begin
-                axi.WVALID <= 1'b0;
-                write_data_state <= 1'b0;
-            end
-        end
-    end
-
-    // Write Response
-    logic w_finish, aw_finish;
-    always_ff @(posedge axi.ACLK)begin
-        if(!rst_sync2) begin
+            axi.WVALID <= '0;
             axi.BREADY <= '0;
-            w_finish <= '0;
-            aw_finish <= '0;
+            axi.AWPROT <= '0;
+            axi.WSTRB <= '1;
             ctrl_write_done <= '0;
-            ctrl_resp <= '0;
         end
         else begin
-            if(axi.WREADY && axi.WVALID) begin
-                w_finish <= 1'b1;
-            end
-            if(axi.AWREADY && axi.AWVALID) begin
-                aw_finish <= 1'b1;
-            end
-            if(aw_finish && w_finish) begin
-                axi.BREADY <= 1'b1;
-            end
-            if(axi.BREADY && axi.BVALID) begin
-                ctrl_resp <= axi.BRESP;
-                ctrl_write_done <= 1'b1;
-                axi.BREADY <= 1'b0;
-                w_finish <= 1'b0;
-                aw_finish <= 1'b0;
-            end 
-            else begin ctrl_write_done <= 1'b0; end
+            case(write_state) 
+                SENDING: begin
+                    if(!axi.AWVALID && !aw_sent)begin
+                        axi.AWADDR <= ctrl_waddr;
+                        axi.AWPROT <= 3'b001; //priviliged 
+                        axi.AWVALID <= 1'b1;
+                    end
+
+                    if(!axi.WVALID && !w_sent) begin
+                        axi.WDATA <= ctrl_wdata;
+                        axi.WSTRB <= ctrl_wstrb;
+                        axi.WVALID <= 1'b1;
+                    end
+                    if(axi.AWVALID && axi.AWREADY) begin
+                        axi.AWVALID <= 1'b0;
+                        aw_sent <= 1'b1;
+                    end
+                    if(axi.WVALID && axi.WREADY) begin
+                        axi.WVALID <= 1'b0;
+                        w_sent <= 1'b1;
+                    end
+                end
+                AWAITING: begin
+                    if(!axi.BREADY && !ctrl_write_done) begin
+                        axi.BREADY <= 1'b1;
+                    end
+                    if(axi.BREADY && axi.BVALID) begin
+                        axi.BREADY <= 1'b0;
+                        ctrl_write_done <= 1'b1;
+                        ctrl_bresp <= axi.BRESP;
+                        w_sent <= 1'b0;
+                        aw_sent <= 1'b0;
+                    end
+                end
+                IDLE: begin
+                    ctrl_write_done <= 1'b0;
+                end
+            endcase
         end
     end
 
-    // Read Address
-    logic read_addr_state;
-    logic addr_sent;
-    always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
-            axi.ARADDR <= '0;
-            axi.ARVALID <= '0;
-            read_addr_state <= '0;
-            axi.ARPROT <= 3'b001;
-            addr_sent <= '0;
-        end 
-        else begin
-            if(ctrl_read_req && !read_addr_state)begin
-                read_addr_state <= 1'b1;
-            end
-            if(read_addr_state) begin
-                axi.ARADDR <= ctrl_addr;
-                axi.ARVALID <= 1'b1;
-            end
-            if(axi.ARVALID && axi.ARREADY) begin
-                axi.ARVALID <= 1'b0;
-                read_addr_state <= 1'b0;     
-                addr_sent <= 1'b1;         
-            end
-        end
-    end
 
-    // Read Data
-    always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
-            axi.RREADY <= '0;
-            ctrl_read_done <= '0;
-        end
-        else begin
-            if(addr_sent)begin
-                axi.RREADY <= 1'b1;
-            end
-            if(axi.RREADY && axi.RVALID && addr_sent) begin
-                ctrl_rdata <= axi.RDATA;
-                ctrl_resp  <= axi.RRESP;
-                axi.RREADY <= 1'b0;
-                ctrl_read_done <= 1'b1;
-                addr_sent <= 1'b0;
-            end else begin 
-                ctrl_read_done <= 1'b0;
-            end
-        end
-    end
 endmodule
