@@ -1,4 +1,4 @@
 # Info
 
-
-![wrte signals](write_waveform.png)
+![write example](images/write_waveform.png)
+![read example](images/read_waveform.png)

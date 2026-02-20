@@ -99,9 +99,72 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
                 IDLE: begin
                     ctrl_write_done <= 1'b0;
                 end
+                default: begin
+                    axi.AWADDR <= '0;
+                    axi.WDATA <= '0;
+                    ctrl_write_done <= '0;
+                    
+                end
+            endcase
+        end
+    end
+
+    always_ff @(posedge axi.ACLK) begin 
+        if(!rst_sync2) begin 
+            read_state <= IDLE;
+        end 
+        else begin
+            case(read_state) 
+                IDLE: if(ctrl_read_req == 1'b1) read_state <= SENDING; 
+                SENDING: if(axi.ARVALID && axi.ARREADY) read_state <= AWAITING;
+                AWAITING: if(axi.RREADY && axi.RVALID) read_state <= IDLE;
+                default: read_state <= IDLE;
             endcase
         end
     end
 
 
+    always_ff @(posedge axi.ACLK) begin
+        if(!rst_sync2) begin
+            ctrl_rresp <= '0;
+            ctrl_rdata <= '0;
+            ctrl_read_done <= '0;
+            axi.ARADDR <= '0;
+            axi.ARVALID <= '0;
+            axi.RREADY <= '0;
+            axi.ARPROT <= '0;
+        end
+        else begin 
+            case(read_state) 
+                SENDING: begin
+                    if(!axi.ARVALID) begin
+                        axi.ARVALID <= 1'b1;
+                        axi.ARADDR <= ctrl_raddr;
+                        axi.ARPROT <= '0;
+                    end
+                    if(axi.ARVALID  && axi.ARREADY) begin
+                        axi.ARVALID <= 1'b0;
+                        axi.RREADY <= 1'b1;
+                    end
+                end
+                AWAITING: begin
+                    if(axi.RREADY && axi.RVALID) begin
+                        ctrl_rresp <= axi.RRESP;
+                        ctrl_rdata <= axi.RDATA;
+                        ctrl_read_done <= 1'b1;
+                        axi.RREADY <= 1'b0;
+                    end
+                end
+                IDLE: begin
+                    ctrl_read_done <= 1'b0;
+                end
+                default: begin 
+                    axi.ARVALID <= '0;
+                    ctrl_read_done <= '0;
+                end
+                
+            endcase
+        end
+        
+    end
 endmodule
