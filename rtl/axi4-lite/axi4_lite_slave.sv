@@ -9,7 +9,7 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     input logic slave_write_done,
     input logic slave_read_done,
     input logic [1:0] slave_rresp,
-    input logic [1:0] slave_bresp
+    input logic [1:0] slave_bresp,
 
 
     axi_lite_if.slave axi
@@ -96,6 +96,11 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
                         w_recieved <= 1'b0;
                     end
                 end
+                default: begin
+                    send_slave_write <= 1'b0;
+                    slave_waddr <= '0;
+                    slave_wdata <= '0;
+                end
             endcase
         end
     end
@@ -110,6 +115,7 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
                 AWAIT_MASTER: if(axi.ARREADY && axi.ARVALID) read_state <= AWAIT_PERIPHERAL;
                 AWAIT_PERIPHERAL: if(slave_read_done) read_state <= RESPOND;
                 RESPOND: if(axi.RVALID && axi.RREADY) read_state <= AWAIT_MASTER;
+                default: read_state <= AWAIT_MASTER;
             endcase
         end
     end
@@ -123,7 +129,34 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
             axi.RDATA <= '0;
         end
         else begin
-
+            case(read_state)
+                AWAIT_MASTER: begin
+                    axi.ARREADY <= 1'b1;
+                    if(axi.ARREADY && axi.ARVALID) begin
+                        slave_raddr <= axi.ARADDR;
+                        send_slave_read <= 1'b1;
+                    end
+                end
+                AWAIT_PERIPHERAL: begin
+                    axi.ARREADY <= 1'b0;
+                    if(send_slave_read) send_slave_read <= 1'b0;
+                    if(slave_read_done)begin
+                        axi.RDATA <= slave_rdata;
+                        axi.RRESP <= slave_rresp;
+                        axi.RVALID <= 1'b1;
+                    end
+                end
+                RESPOND: begin
+                    if(axi.RVALID && axi.RREADY) begin
+                        axi.RVALID <= 1'b0;
+                    end
+                end
+                default: begin
+                    send_slave_read <= 1'b0;
+                    axi.RVALID <= 1'b0;
+                    axi.ARREADY <= 1'b0;
+                end
+            endcase
         end
     end
 

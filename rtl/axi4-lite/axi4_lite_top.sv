@@ -15,7 +15,8 @@ module axi4_lite_top (
     axi4_lite_master m1 (
         .axi            (axi_if),
 
-        .ctrl_addr      (ctrl_addr),
+        .ctrl_waddr      (ctrl_addr),
+        .ctrl_raddr      (ctrl_addr),
         .ctrl_wdata     (ctrl_wdata),
         .ctrl_wstrb     (4'hF),
         .ctrl_write_req (ctrl_write_req),
@@ -23,22 +24,26 @@ module axi4_lite_top (
 
         .ctrl_rdata     (),
         .ctrl_write_done(),
-        .ctrl_read_done (),
-        .ctrl_resp      ()
+        .ctrl_read_done (), 
+        .ctrl_bresp      (),
+        .ctrl_rresp      ()
     );
 
     axi4_lite_slave s1 (
         .axi (axi_if),
 
-        .ctrl_addr      (),
-        .ctrl_wdata     (),
-        .ctrl_wstrb     (),
-        .ctrl_write_req (),
-        .ctrl_read_req  (),
-        .ctrl_rdata     (),
-        .ctrl_write_done(),
-        .ctrl_read_done (),
-        .ctrl_resp      ()
+        .slave_raddr(),
+        .slave_waddr(),
+        .slave_wdata(),
+        .slave_wstrb(),
+        .send_slave_write(),
+        .send_slave_read(),
+
+        .slave_rdata(),
+        .slave_write_done(),
+        .slave_read_done(),
+        .slave_rresp(),
+        .slave_bresp()
     );
 
 endmodule
