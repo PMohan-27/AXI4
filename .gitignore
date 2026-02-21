@@ -1,7 +1,6 @@
 venv/
-test/__pycache__
-test/sim_build
-test/results.xml
-docs/notes.txt
-test/dump.fst
-docs/wavedrom.txt
+axi4-lite/docs/*.txt
+axi4-lite/test/__pycache__
+axi4-lite/test/sim_build
+axi4-lite/test/dump.fst
+axi4-lite/test/results.xml
