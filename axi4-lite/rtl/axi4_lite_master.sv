@@ -20,22 +20,10 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
     typedef enum logic[1:0] { IDLE, SENDING, AWAITING } state;
     state write_state, read_state;
     logic aw_sent, w_sent;
-    // NOTE: In SoC integration, ARESETn is assumed synchronized externally.
-    logic rst_sync1, rst_sync2;
-    always_ff @(posedge axi.ACLK or negedge axi.ARESETn) begin
-        if(!axi.ARESETn)begin
-            rst_sync1 <= 1'b0;
-            rst_sync2 <= 1'b0;
-        end
-        else begin 
-            rst_sync1 <= 1'b1;
-            rst_sync2 <= rst_sync1;
-        end
-    end
 
     
     always_ff @(posedge axi.ACLK) begin 
-        if(!rst_sync2) begin 
+        if(!axi.ARESETn) begin 
             aw_sent <= '0;
             w_sent <= '0;
             write_state <= IDLE;
@@ -51,7 +39,7 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
     end
 
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
+        if(!axi.ARESETn) begin
             axi.AWADDR <= '0;
             axi.AWVALID <= '0;
             axi.WDATA <= '0;
@@ -110,7 +98,7 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
     end
 
     always_ff @(posedge axi.ACLK) begin 
-        if(!rst_sync2) begin 
+        if(!axi.ARESETn) begin 
             read_state <= IDLE;
         end 
         else begin
@@ -125,7 +113,7 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
 
 
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
+        if(!axi.ARESETn) begin
             ctrl_rresp <= '0;
             ctrl_rdata <= '0;
             ctrl_read_done <= '0;

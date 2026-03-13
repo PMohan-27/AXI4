@@ -18,21 +18,8 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     state write_state, read_state;
     logic aw_recieved, w_recieved;
 
-    // NOTE: In SoC integration, ARESETn is assumed synchronized externally.
-    logic rst_sync1, rst_sync2;
-    always_ff @(posedge axi.ACLK or negedge axi.ARESETn) begin
-        if(!axi.ARESETn)begin
-            rst_sync1 <= 1'b0;
-            rst_sync2 <= 1'b0;
-        end
-        else begin 
-            rst_sync1 <= 1'b1;
-            rst_sync2 <= rst_sync1;
-        end
-    end
-
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
+        if(!axi.ARESETn) begin
             write_state <= AWAIT_MASTER;
             aw_recieved <= '0;
             w_recieved <= '0;
@@ -48,7 +35,7 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     end
 
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
+        if(!axi.ARESETn) begin
             axi.AWREADY <= '0;
             axi.WREADY <= '0;
             axi.BRESP <= '0;
@@ -107,7 +94,7 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
 
 
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2) begin
+        if(!axi.ARESETn) begin
             read_state <= AWAIT_MASTER;
         end
         else begin
@@ -123,7 +110,7 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
 
 
     always_ff @(posedge axi.ACLK) begin
-        if(!rst_sync2)begin
+        if(!axi.ARESETn)begin
             axi.RVALID <= '0;
             axi.ARREADY <= '0;
             axi.RDATA <= '0;
