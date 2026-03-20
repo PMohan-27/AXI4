@@ -24,8 +24,6 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
     
     always_ff @(posedge axi.ACLK) begin 
         if(!axi.ARESETn) begin 
-            aw_sent <= '0;
-            w_sent <= '0;
             write_state <= IDLE;
         end 
         else begin
@@ -40,6 +38,8 @@ module axi4_lite_master #(parameter  int DATA_WIDTH = 32, parameter int ADDRESS_
 
     always_ff @(posedge axi.ACLK) begin
         if(!axi.ARESETn) begin
+            aw_sent <= '0;
+            w_sent <= '0;
             axi.AWADDR <= '0;
             axi.AWVALID <= '0;
             axi.WDATA <= '0;

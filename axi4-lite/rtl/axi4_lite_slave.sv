@@ -21,8 +21,6 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
     always_ff @(posedge axi.ACLK) begin
         if(!axi.ARESETn) begin
             write_state <= AWAIT_MASTER;
-            aw_recieved <= '0;
-            w_recieved <= '0;
         end 
         else begin
             case(write_state)
@@ -44,6 +42,8 @@ module axi4_lite_slave #(parameter DATA_WIDTH = 32, ADDRESS_WIDTH = 32)(
             slave_wdata <= '0;
             slave_wstrb <= '0;
             send_slave_write <= '0;
+            aw_recieved <= '0;
+            w_recieved <= '0;
         end
         else begin
             case(write_state) 
